@@ -1,15 +1,16 @@
 package com.example.springboot_security_bookedition;
 
+import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
+import java.io.IOException;
 import java.security.Principal;
+import java.util.Map;
 
 @org.springframework.stereotype.Controller
 public class Controller {
@@ -18,6 +19,12 @@ public class Controller {
 
     @Autowired
     RoleRepo roleRepo;
+
+    @Autowired
+    ActorRepo actorRepo;
+
+    @Autowired
+    CloudinaryConfig cloudc;
 
     @RequestMapping("/secure")
     public String secure(Principal principal, Model model){
@@ -49,8 +56,31 @@ public class Controller {
         return "index";
     }
     @RequestMapping("/")
-    public String index(){
-        return "index";
+    public String listActors(Model model){
+        model.addAttribute("actors", actorRepo.findAll());
+        return "list";
+    }
+
+    @GetMapping("/add")
+    public String newActor(Model model){
+        model.addAttribute("actor", new Actor());
+        return "actorform";
+    }
+    @PostMapping("/add")
+    public String processActor(@ModelAttribute Actor actor,
+                               @RequestParam("file") MultipartFile file){
+        if(file.isEmpty()){
+            return "redirect:/add";
+        }
+        try{
+            Map uploadResult = cloudc.upload(file.getBytes(), ObjectUtils.asMap("resourcetype", "auto"));
+            actor.setPhoto(uploadResult.get("url").toString());
+            actorRepo.save(actor);
+        }catch(IOException e){
+            e.printStackTrace();
+            return "redirect:/add";
+        }
+        return "redirect:/";
     }
 
     @RequestMapping("/login")
